@@ -45,6 +45,10 @@ class GaussianClassificationExperiment(BaseExperiment):
         save_plots = config['plotting']['save_plots']
         save_dir = config['plotting']['save_dir']
         self.plotter = Plotter(save_plots, save_dir)
+        # logger
+        from utils.logger import Logger
+        self.logger = Logger(config)
+        self.logger.log("Initialized GaussianClassificationExperiment.")
 
     def run(self):
         # create an MLP model
@@ -54,6 +58,7 @@ class GaussianClassificationExperiment(BaseExperiment):
                     output_dim=self.model_config['output_dim'],
                     activation=self.model_config['activation'],
                     bias=self.model_config['bias'])
+        self.logger.log(f"Created MLP model: {model}")
 
         # create test dataset and test dataloader
         from core.dataset import Gaussian
@@ -62,17 +67,22 @@ class GaussianClassificationExperiment(BaseExperiment):
                                 mean_distance=self.dataset_config['mean_distance'],
                                 sigma=self.dataset_config['sigma'],
                                 seed=self.exp_config['seed'])
+        self.logger.log(f"Created test dataset with {len(test_dataset)} samples.")
         from torch.utils.data import DataLoader
         test_loader = DataLoader(test_dataset, batch_size=32, shuffle=True)
+        self.logger.log("Created test DataLoader.")
 
         # Estimate classifier density D(E)
         true_errors = self.estimate_classifier_density(model, test_loader)
-        self.plotter.plot_histogram(data=true_errors,
-                                    bins=self.doc_config['histogram_bins'],
-                                    title = "Classifier Density D(E)",
-                                    xlabel = "True Error",
-                                    ylabel = "Density")
+        self.logger.log(f"Estimated classifier density D(E) with {len(true_errors)} samples.")
+        hist_fig, _ = self.plotter.plot_histogram(data=true_errors,
+                                                  bins=self.doc_config['histogram_bins'],
+                                                  title = "Classifier Density D(E)",
+                                                  xlabel = "True Error",
+                                                  ylabel = "Density")
+        self.logger.save_figure(hist_fig, "classifier_density_histogram.png")
         
+        """
         # test error distribution for random weights with zero training error
         zero_empirical_true_errors = []  
         for n_train_samples in self.erm_config['n_values']:
@@ -90,10 +100,10 @@ class GaussianClassificationExperiment(BaseExperiment):
         self.plotter.plot_boxplot(data=zero_empirical_true_errors,
                                   title="True Error Distribution for Random Weights with Zero Training Error",
                                   xlabel="Number of Training Samples",
-                                  ylabel="True Error")
+                                  ylabel="True Error")"""
 
         # Show plots   
-        self.plotter.show_plots()
+        # self.plotter.show_plots()
 
     def estimate_classifier_density(self, model, data_loader) -> list[float]:
         # Estimate classifier density D(E) by sampling random weights

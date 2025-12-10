@@ -18,6 +18,7 @@ class Plotter:
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         self.figures.append((figure, ax))
+        return figure, ax
 
     def show_plots(self):
         for figure, _ in self.figures:

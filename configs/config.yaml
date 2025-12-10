@@ -10,7 +10,7 @@ erm:
   solutions_per_n: 200 #1000
 
 doc:
-  n_trials: 10000 # 1000000
+  n_trials: 1000 # 1000000
   histogram_bins: 100
 
 training:
