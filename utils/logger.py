@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import datetime as dt
 import yaml
+import numpy as np
 
 class Logger:
     def __init__(self, config):
@@ -21,3 +22,7 @@ class Logger:
     def save_figure(self, fig, filename: str):
         fig_path = self.save_dir / filename
         fig.savefig(fig_path)
+
+    def save_numpy_array(self, array, filename: str):
+        array_path = self.save_dir / filename
+        np.save(array_path, array)

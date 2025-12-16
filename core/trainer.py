@@ -5,5 +5,10 @@ class Trainer:
         ...
     def train_until_zero_error(self):
         ...
-    def random_sample_to_zero_error(self):  # For random sampling experiments
-        ...
+    def sample_unit_sphere_weights_until_zero_error(self, model, train_loader, evaluator):  # For random sampling experiments
+        while True:
+            flat_weights = model.sample_unit_sphere_weights()
+            model.set_flatten_weights(flat_weights)
+            train_error = evaluator.compute_error(model, train_loader)
+            if train_error == 0.0:
+                break  

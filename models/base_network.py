@@ -13,6 +13,17 @@ class BaseNetwork(nn.Module):
         flat_weights /= flat_weights.norm()
         return flat_weights
 
+    def sample_unit_sphere_weights_batch(self, k: int):
+        """Return a batch of k flat weight vectors sampled uniformly on the unit sphere.
+
+        Returns a tensor of shape (k, num_parameters), each row normalized independently.
+        """
+        flat = torch.randn(k, self.num_parameters())
+        norms = flat.norm(dim=1, keepdim=True)
+        norms[norms == 0] = 1.0
+        flat = flat / norms
+        return flat
+
     def set_flatten_weights(self, flat_weights):
         current_index = 0
 
