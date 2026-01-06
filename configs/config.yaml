@@ -7,10 +7,10 @@ experiment:
 
 erm:
   n_values: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-  solutions_per_n: 100 #1000
+  solutions_per_n: 1000 #1000
 
 doc:
-  n_trials: 100 # 1000000
+  n_trials: 1000000 # 1000000
   histogram_bins: 100
 
 training:
@@ -27,7 +27,7 @@ dataset:
   gaussian:
     n_classes: 2
     feature_dim: 10
-    test_size: 1000
+    test_size: 10000
     mean_distance: 2.0
     sigma: 0.5
 

@@ -8,12 +8,11 @@ class Plotter:
         
     def plot_histogram(self, 
                        data, bins=100, 
-                       density=True, 
                        title="Histogram",
                        xlabel="Value", 
                        ylabel="Density"):
         figure, ax = plt.subplots()
-        ax.hist(data, bins=bins, density=density)
+        ax.hist(data, bins=bins)
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
