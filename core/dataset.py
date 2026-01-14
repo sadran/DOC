@@ -19,11 +19,11 @@ class Gaussian(Dataset):
         mu0 = torch.zeros(feature_dim)
         mu1 = torch.zeros(feature_dim)
 
-        mu0[0] = -mean_distance / 2
-        mu1[0] = mean_distance / 2
+        mu0[0] = mean_distance / 2
+        mu1[0] = -mean_distance / 2
 
-        x0 = torch.normal(mu0.repeat([n_samples_per_class, 1]), sigma, generator=g)
-        x1 = torch.normal(mu1.repeat(n_samples_per_class, 1), sigma, generator=g)
+        x0 = torch.normal(mu0.repeat([n_samples_per_class, 1]), sigma)
+        x1 = torch.normal(mu1.repeat([n_samples_per_class, 1]), sigma)
 
         y0 = torch.zeros(n_samples_per_class, dtype=torch.long)
         y1 = torch.ones(n_samples_per_class, dtype=torch.long)

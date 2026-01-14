@@ -13,7 +13,7 @@ class MLP(BaseNetwork):
 
     Example:
         mlp = MLP(
-            input_dim=784,
+            input_dim=10,
             hidden_layers=[10],
             output_dim=2,
             bias=False,
@@ -32,7 +32,7 @@ class MLP(BaseNetwork):
         if activation.lower() == "relu":
             activation_module = nn.ReLU(inplace=True)
         elif activation.lower() == "leaky_relu":
-            activation_module = nn.LeakyReLU(inplace=True, negative_slope=0.1)
+            activation_module = nn.LeakyReLU(negative_slope=0.1)
         else:
             raise ValueError(f"Unsupported activation: {activation}")
         

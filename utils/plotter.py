@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 class Plotter:
     def __init__(self, save_plots: bool = False, save_dir: str = None):
@@ -13,23 +14,39 @@ class Plotter:
                        ylabel="Density"):
         figure, ax = plt.subplots()
         ax.hist(data, bins=bins)
+        ax.set_xticks(np.arange(0.0, 1.01, 0.1))
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         self.figures.append((figure, ax))
         return figure, ax
 
-    def plot_boxplot(self, data, title, xlabel, ylabel):
+    def plot_boxplot(self, true_errors, n_values, title, xlabel, ylabel):
         figure, ax = plt.subplots()
-        categories = list(set([d[0] for d in data]))
-        boxplot_data = [ [d[1] for d in data if d[0] == cat] for cat in categories ]
-        ax.boxplot(boxplot_data, labels=categories, positions=categories)
-        ax.scatter([d[0] for d in data], [d[1] for d in data], color='red', alpha=0.5)
+        
+        ax.boxplot(true_errors, labels=n_values, positions=n_values)
+        for n, errors in zip(n_values, true_errors):
+            ax.scatter([n] * len(errors), errors, color='red', alpha=0.5)
         ax.set_title(title)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         self.figures.append((figure, ax))
         return figure, ax
+
+    def plot_doc_vs_erm(self, n_values, erm_means, doc_means, title="Mean True Error: ERM vs DOC"):
+        fig, ax = plt.subplots(figsize=(6, 4))
+
+        # red x: empirical mean test error of ERM solutions
+        ax.plot(n_values, erm_means, "x", c="blue", label="Empirical mean (ERM solutions)")
+
+        # blue +: DOC-based predicted mean
+        ax.plot(n_values, doc_means, "+", c="red", label="DOC-based bound/prediction")
+
+        ax.set_title(title)
+        ax.set_xlabel("n")
+        ax.set_ylabel("En")
+        ax.legend()
+        return fig, ax
 
     def show_plots(self):
         for figure, _ in self.figures:

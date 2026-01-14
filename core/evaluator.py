@@ -27,8 +27,8 @@ class Evaluator:
         if dataset is not None and hasattr(dataset, "x") and hasattr(dataset, "y"):
             x = dataset.x.to(self.device, non_blocking=True)
             y = dataset.y.to(self.device, non_blocking=True)
-            with torch.amp.autocast(device_type=self.device.type):
-                logits = model(x)
+            # with torch.amp.autocast(device_type=self.device.type):
+            logits = model(x)
             preds = logits.argmax(dim=1)
             total = y.numel()
             incorrect = (preds != y).sum().item()
