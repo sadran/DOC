@@ -136,7 +136,7 @@ class GaussianClassificationExperiment(BaseExperiment):
         # Blue crosses: DOC prediction from D(E)
         doc_means = self.doc_predicted_mean_error(true_errors)
         # Plot comparison (right-column figure)
-        doc_vs_erm_fig, ax = self.plotter.plot_doc_vs_erm(n_values, erm_means, doc_means)
+        doc_vs_erm_fig, ax = self.plotter.plot_doc_vs_erm(self.erm_config['n_values'], erm_means, doc_means)
         self.logger.save_figure(doc_vs_erm_fig, "doc_vs_erm_mean_true_error.png")
 
         end_time = dt.now()
@@ -157,6 +157,7 @@ class GaussianClassificationExperiment(BaseExperiment):
     def estimate_true_error_distribution(self, model, test_loader) -> list[float]:
         # Estimate true error distribution for random weights with zero training error
         n_values = self.erm_config['n_values']
+
         solutions_per_n = self.erm_config['solutions_per_n']
         true_errors = []  # list[list[float]]
         # ensure model is on the evaluator device
@@ -187,14 +188,15 @@ class GaussianClassificationExperiment(BaseExperiment):
             true_errors.append(errors_for_n)
         return true_errors
     
-    def doc_predicted_mean_error(self, true_errors: list[float], n_values: list[int], bins: int = 100):
+    def doc_predicted_mean_error(self, true_errors: list[float], bins: int = 100):
         """
         Compute the DOC-based predicted mean true error for each n using the sampled true_errors.
 
         Returns:
             pred: np.ndarray of shape (len(n_values),)
         """
-        n_values = self.erm_config["n_values"]
+        n_values = [n for n in range(0, 31, 2)]
+        
         bins = self.doc_config["histogram_bins"]
         # Compute histogram-based density and discrete approximation of the DOC formula.
         hist, bin_edges = np.histogram(
