@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 import torch
+import os.path as osp
 
 class Gaussian(Dataset):
     def __init__(self, 
@@ -36,3 +37,33 @@ class Gaussian(Dataset):
     
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
         return self.x[index], self.y[index]
+
+
+class Mnist(Dataset):
+    def __init__(self, images_path: str, labels_path: str, n_samples: int = 60000):
+        super().__init__()
+        self.images_path = images_path
+        self.labels_path = labels_path
+        self.images, self.labels = self.load_mnist(self.images_path, self.labels_path, n_samples)
+                                            
+    def load_mnist(self, images_path, labels_path, n_samples):
+        with open(labels_path, 'rb') as lbpath:
+            lbpath.read(8)
+            labels = torch.frombuffer(lbpath.read(), dtype=torch.uint8).long()
+
+        with open(images_path, 'rb') as imgpath:
+            imgpath.read(16)
+            images = torch.frombuffer(imgpath.read(), dtype=torch.uint8)
+            images = images.view(labels.size(0), 28*28).float() / 255.0
+        
+        if n_samples < labels.size(0):
+            perm = torch.randperm(labels.size(0))[:n_samples]
+            images = images[perm]
+            labels = labels[perm]
+        return images, labels
+        
+    def __len__(self) -> int:
+        return self.images.size(0)
+
+    def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.images[index], self.labels[index]

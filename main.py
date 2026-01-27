@@ -1,7 +1,19 @@
 import argparse, yaml
-from core.experiments import ExperimentFactory
+from experiments.base_experiment import BaseExperiment
 
-
+class ExperimentFactory:
+    @staticmethod
+    def create_experiment(config) -> BaseExperiment:
+        # create and return the corresponding experiment instance based on config
+        experiment_type = config['experiment']['type']
+        if experiment_type == 'gaussian_classification':
+            from experiments.gaussian_classification_experiment import GaussianClassificationExperiment
+            return GaussianClassificationExperiment(config)
+        elif experiment_type == 'mnist_classification':
+            from experiments.mnist_classification_experiment import MnistClassificationExperiment
+            return MnistClassificationExperiment(config)
+        else:
+            raise ValueError(f"Unknown experiment type: {experiment_type}")
 
 def main():
     parser = argparse.ArgumentParser()

@@ -1,44 +1,29 @@
 import torch
-device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
 import numpy as np
 from datetime import datetime as dt
 from tqdm import tqdm
 
+# base experiment
+from experiments.base_experiment import BaseExperiment
+
 # DataLoader
 from torch.utils.data import DataLoader
 
 # datasets
-from core.dataset import Gaussian
+from core.dataset import Mnist
 
 # models 
 from models.mlp import MLP
 
-class BaseExperiment:
-    def __init__(self):
-        ...
-    def run(self):
-        ...
-        
-class ExperimentFactory:
-    @staticmethod
-    def create_experiment(config) -> BaseExperiment:
-        # create and return the corresponding experiment instance based on config
-        experiment_type = config['experiment']['type']
-        if experiment_type == 'gaussian_classification':
-            from core.experiments import GaussianClassificationExperiment
-            return GaussianClassificationExperiment(config)
-        else:
-            raise ValueError(f"Unknown experiment type: {experiment_type}")
-        
 
-class GaussianClassificationExperiment(BaseExperiment):
+class MnistClassificationExperiment(BaseExperiment):
     def __init__(self, config):
         super().__init__()
         # experiment configuration
         self.exp_config = config['experiment']
         # dataset configuration
-        self.dataset_config = config['dataset']['gaussian']
+        self.dataset_config = config['dataset']['mnist']
         # model configuration
         if self.exp_config['model'] in config['models']:
             self.model_config = config['models'][self.exp_config['model']]
@@ -52,7 +37,7 @@ class GaussianClassificationExperiment(BaseExperiment):
         # logger
         from utils.logger import Logger
         self.logger = Logger(config)
-        self.logger.log("Initialized GaussianClassificationExperiment.")
+        self.logger.log("Initialized MnistClassificationExperiment.")
 
         # evaluator
         from core.evaluator import Evaluator
@@ -88,12 +73,10 @@ class GaussianClassificationExperiment(BaseExperiment):
         # -----------------------------------------
         # 2) Build a fixed balanced test set + loader
         # -----------------------------------------
-        test_dataset = Gaussian(feature_dim=self.dataset_config['feature_dim'],
-                                n_samples_per_class=self.dataset_config['test_size']//2,
-                                mean_distance=self.dataset_config['mean_distance'],
-                                sigma=self.dataset_config['sigma'],
-                                seed=self.exp_config['seed'])
-        self.logger.log(f"Created test dataset with {len(test_dataset)} samples.")
+        test_dataset = Mnist(images_path=self.dataset_config['test_images_filepath'],
+                                 labels_path=self.dataset_config['test_labels_filepath'],
+                                 n_samples=self.dataset_config['test_size'])
+        self.logger.log(f"Loaded test dataset with {len(test_dataset)} samples from Mnist dataset.")
         test_loader = DataLoader(test_dataset, batch_size=512, num_workers=4)
         self.logger.log("Created test DataLoader.")
         
@@ -131,6 +114,7 @@ class GaussianClassificationExperiment(BaseExperiment):
         #     - red x: empirical mean of ERM true errors (from middle plot)
         #     - blue x: DOC-based predicted mean computed from D(E) (left plot)
         # -------------------------------------------------------------------
+        self.logger.log("Computing DOC-based predicted mean true error and comparing with ERM empirical means.")
         # Red crosses: empirical mean test error for each n
         erm_means = np.array([float(np.mean(errs)) for errs in solutions_true_errors], dtype=float)
         # Blue crosses: DOC prediction from D(E)

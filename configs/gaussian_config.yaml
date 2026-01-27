@@ -1,27 +1,17 @@
 experiment:
   type: "gaussian_classification"
   name: "Gaussian Classification with Small MLP"
-  model: "mlp3"
+  model: "mlp1"
   dataset: "gaussian"
   seed: 123
 
 erm:
-  n_values: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22] #, 24, 26, 28, 30]
+  n_values: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
   solutions_per_n: 1000 #1000
 
 doc:
   n_trials: 1000000 # 1000000
   histogram_bins: 100
-
-training:
-  optimizer: "sgd"
-  lr: 0.01
-  batch_size: 32
-  epochs: 100
-
-plotting:
-  save_plots: False
-  save_dir: "./results/plots"
   
 dataset:
   gaussian:
@@ -30,15 +20,6 @@ dataset:
     test_size: 10000
     mean_distance: 2.0
     sigma: 0.5
-
-  mnist:
-    test_size: 6000
-    root: "./data/mnist"
-
-  caltech:
-    root: "./data/caltech"
-    classes: ["Motorbike", "Airplanes"]
-
 
 models:
   mlp1:
@@ -62,18 +43,4 @@ models:
     output_dim: 2
     bias: False
     activation: "leaky_relu"
-  mlp4:
-    type: "mlp"
-    input_dim: 784
-    hidden_layers: []
-    output_dim: 2
-    bias: False
-    activation: "leaky_relu"
-  mlp5:
-    type: "mlp"
-    input_dim: 784
-    hidden_layers: [10]
-    output_dim: 2
-    bias: False
-    activation: "leaky_relu"
-  
+ 
