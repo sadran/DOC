@@ -1,9 +1,9 @@
 
 experiment:
   type: "mnist_classification"
-  name: "mnist Classification"
-  model: "mlp1"
-  dataset: "gaussian"
+  name: "mnist classification"
+  model: "mlp2"
+  dataset: "mnist"
   seed: 123
 
 erm:
@@ -19,20 +19,16 @@ training:
   lr: 0.01
   batch_size: 32
   epochs: 100
-
-plotting:
-  save_plots: False
-  save_dir: "./results/plots"
   
 dataset:
-  mnist:
-    test_size: 1800
-    train_size: 6000
-    root: "./data/mnist"
-    train_images_filepath: "./data/mnist/train-images-idx3-ubyte" 
-    train_labels_filepath: "./data/mnist/train-labels-idx1-ubyte"
-    test_images_filepath: "./data/mnist/t10k-images-idx3-ubyte"
-    test_labels_filepath: "./data/mnist/t10k-labels-idx1-ubyte"
+  name: "mnist"
+  test_size: 1800
+  train_size: 6000
+  root: "./data/mnist"
+  train_images_filepath: "data/mnist/train-images-idx3-ubyte/train-images-idx3-ubyte" 
+  train_labels_filepath: "data/mnist/train-labels-idx1-ubyte/train-labels-idx1-ubyte"
+  test_images_filepath: "data/mnist/t10k-images-idx3-ubyte/t10k-images-idx3-ubyte"
+  test_labels_filepath: "data/mnist/t10k-labels-idx1-ubyte/t10k-labels-idx1-ubyte"
 
 
 models:

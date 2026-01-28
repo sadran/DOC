@@ -6,24 +6,29 @@ from tqdm import tqdm
 
 # base experiment
 from experiments.base_experiment import BaseExperiment
-
 # DataLoader
 from torch.utils.data import DataLoader
-
 # datasets
 from core.dataset import Mnist
-
 # models 
 from models.mlp import MLP
-
+# evaluator
+from core.evaluator import Evaluator
+# plotter
+from utils.plotter import Plotter
+# trainer
+from core.trainer import Trainer
 
 class MnistClassificationExperiment(BaseExperiment):
     def __init__(self, config):
         super().__init__()
+        # -----------------------------------------
+        # 1) Loading configurations
+        # -----------------------------------------
         # experiment configuration
         self.exp_config = config['experiment']
         # dataset configuration
-        self.dataset_config = config['dataset']['mnist']
+        self.dataset_config = config['dataset']
         # model configuration
         if self.exp_config['model'] in config['models']:
             self.model_config = config['models'][self.exp_config['model']]
@@ -34,57 +39,58 @@ class MnistClassificationExperiment(BaseExperiment):
         # ERM configurations
         self.erm_config = config['erm']
 
+        # -----------------------------------------
+        # 2) Initialize components
+        # -----------------------------------------
         # logger
         from utils.logger import Logger
         self.logger = Logger(config)
-        self.logger.log("Initialized MnistClassificationExperiment.")
 
         # evaluator
-        from core.evaluator import Evaluator
-        
-        self.evaluator = Evaluator(device='cuda')
-        self.logger.log(f"Using {torch.cuda.get_device_name(0)} for evaluation.")
-            
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.evaluator = Evaluator(device=device)
+        if device == 'cuda':
+            self.logger.log(f"Using {torch.cuda.get_device_name(0)} for evaluation.")
+        else:
+            self.logger.log("Using CPU for evaluation.")
+
         # trainer
-        from core.trainer import Trainer
         self.trainer = Trainer()
+
         # plotter
-        from utils.plotter import Plotter
-        save_plots = config['plotting']['save_plots']
-        save_dir = config['plotting']['save_dir']
-        self.plotter = Plotter(save_plots, save_dir)
+        self.plotter = Plotter()
+
+        # -----------------------------------------
+        # 3) Create the model
+        # -----------------------------------------
+        self.model = MLP(input_dim=self.model_config['input_dim'],
+                        hidden_layers=self.model_config['hidden_layers'],
+                        output_dim=self.model_config['output_dim'],
+                        activation=self.model_config['activation'],
+                        bias=self.model_config['bias'])
+        self.logger.log(f"Created the model: {self.model}")
+        self.model.to(self.evaluator.device)
+
+        # -----------------------------------------
+        # 4) Build a fixed balanced test set + loader
+        # -----------------------------------------
+        self.test_dataset = Mnist(images_path=self.dataset_config['test_images_filepath'],
+                                 labels_path=self.dataset_config['test_labels_filepath'],
+                                 n_samples=self.dataset_config['test_size'])
+        self.logger.log(f"Loaded test dataset with {len(self.test_dataset)} samples from Mnist dataset.")
+        self.test_loader = DataLoader(self.test_dataset, batch_size=512, num_workers=4)
+        self.logger.log("Created test DataLoader.")
+
+        self.logger.log(f"Initializing {self.__class__.__name__} completed.")
         
 
     def run(self):
         start_time = dt.now()
-        # -----------------------------
-        # 1) Build model (A1/A2/A3 etc.)
-        # -----------------------------
-        model = MLP(input_dim=self.model_config['input_dim'],
-                    hidden_layers=self.model_config['hidden_layers'],
-                    output_dim=self.model_config['output_dim'],
-                    activation=self.model_config['activation'],
-                    bias=self.model_config['bias'])
-        self.logger.log(f"Created MLP model: {model}")
-
-        # move model once to evaluation device (avoid doing it inside every compute_error call)
-        model.to(self.evaluator.device)
-
-        # -----------------------------------------
-        # 2) Build a fixed balanced test set + loader
-        # -----------------------------------------
-        test_dataset = Mnist(images_path=self.dataset_config['test_images_filepath'],
-                                 labels_path=self.dataset_config['test_labels_filepath'],
-                                 n_samples=self.dataset_config['test_size'])
-        self.logger.log(f"Loaded test dataset with {len(test_dataset)} samples from Mnist dataset.")
-        test_loader = DataLoader(test_dataset, batch_size=512, num_workers=4)
-        self.logger.log("Created test DataLoader.")
-        
         # ---------------------------------------------
-        # 3) Estimate classifier density D(E) (left plot)
+        # 1) Estimate classifier density D(E) (left plot)
         # ---------------------------------------------
         self.logger.log(f"Estimating classifier density D(E) with {self.doc_config['n_trials']} trials.")
-        true_errors = self.estimate_classifier_density(model, test_loader)
+        true_errors = self.estimate_classifier_density()
         self.logger.save_numpy_array(np.array(true_errors), "classifier_density.npy")
         self.logger.log(f"Estimating classifier density completed.")
         hist_fig, _ = self.plotter.plot_histogram(data=true_errors,
@@ -95,10 +101,10 @@ class MnistClassificationExperiment(BaseExperiment):
         self.logger.save_figure(hist_fig, "classifier_density_histogram.png")
         
         # -------------------------------------------------------------------
-        # 4) Estimate true-error distribution of ERM solutions (middle plot)
+        # 2) Estimate true-error distribution of ERM solutions (middle plot)
         # -------------------------------------------------------------------
         self.logger.log("Estimating true error distribution for random weights with zero training error.")
-        solutions_true_errors = self.estimate_true_error_distribution(model, test_loader)
+        solutions_true_errors = self.estimate_true_error_distribution()
         # Save numpy array of zero empirical true errors
         self.logger.save_numpy_array(np.array(solutions_true_errors, dtype=object), "solutions_true_errors.npy")
         # plot boxplot of true errors for different training set sizes
@@ -109,8 +115,8 @@ class MnistClassificationExperiment(BaseExperiment):
                                                     ylabel="True Error")
         self.logger.save_figure(boxplot_fig, "solutions_true_error_boxplot.png")
         
-         # -------------------------------------------------------------------
-        # 5) Right-column plot (red x vs blue x)
+        # -------------------------------------------------------------------
+        # 3) Right-column plot (red x vs blue x)
         #     - red x: empirical mean of ERM true errors (from middle plot)
         #     - blue x: DOC-based predicted mean computed from D(E) (left plot)
         # -------------------------------------------------------------------
@@ -126,35 +132,35 @@ class MnistClassificationExperiment(BaseExperiment):
         end_time = dt.now()
         self.logger.log(f"Experiment completed in {(end_time - start_time)}.")
 
-    def estimate_classifier_density(self, model, data_loader) -> list[float]:
+    def estimate_classifier_density(self) -> list[float]:
         # Estimate classifier density D(E) by sampling random weights
         n_trials = self.doc_config['n_trials']
         true_errors = []
         # model should already be on evaluation device
         for _ in tqdm(range(n_trials)):
-            flat_weights = model.sample_unit_sphere_weights(device=self.evaluator.device)
-            model.set_flatten_weights(flat_weights)
-            true_error = self.evaluator.compute_error(model, data_loader)
+            flat_weights =  self.model.sample_unit_sphere_weights(device=self.evaluator.device)
+            self.model.set_flatten_weights(flat_weights)
+            true_error = self.evaluator.compute_error(self.model, self.test_loader)
             true_errors.append(true_error)
         return true_errors
     
-    def estimate_true_error_distribution(self, model, test_loader) -> list[float]:
+    def estimate_true_error_distribution(self) -> list[float]:
         # Estimate true error distribution for random weights with zero training error
         n_values = self.erm_config['n_values']
 
         solutions_per_n = self.erm_config['solutions_per_n']
         true_errors = []  # list[list[float]]
         # ensure model is on the evaluator device
-        model.to(self.evaluator.device)
+        self.model.to(self.evaluator.device)
         for n in n_values:
             errors_for_n = []
             self.logger.log(f"Finding zero empirical error solutions for {n} training samples.")
             for s in tqdm(range(solutions_per_n)):
                 if n==0:
                     # if zero training samples, just sample random weights and compute true error
-                    flat_weights = model.sample_unit_sphere_weights(device=self.evaluator.device)
-                    model.set_flatten_weights(flat_weights)
-                    true_error = self.evaluator.compute_error(model, test_loader)
+                    flat_weights = self.model.sample_unit_sphere_weights(device=self.evaluator.device)
+                    self.model.set_flatten_weights(flat_weights)
+                    true_error = self.evaluator.compute_error(self.model, self.test_loader)
                     errors_for_n.append(true_error)
                     continue
 
@@ -166,8 +172,8 @@ class MnistClassificationExperiment(BaseExperiment):
                                         seed=self.exp_config['seed'])
                 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
 
-                self.trainer.sample_unit_sphere_weights_until_zero_error(model, train_loader, self.evaluator)
-                true_error = self.evaluator.compute_error(model, test_loader)
+                self.trainer.sample_unit_sphere_weights_until_zero_error(self.model, train_loader, self.evaluator)
+                true_error = self.evaluator.compute_error(self.model, self.test_loader)
                 errors_for_n.append(true_error)
             true_errors.append(errors_for_n)
         return true_errors

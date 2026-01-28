@@ -1,6 +1,6 @@
 experiment:
   type: "gaussian_classification"
-  name: "Gaussian Classification with Small MLP"
+  name: "Gaussian Classification (test)"
   model: "mlp1"
   dataset: "gaussian"
   seed: 123
@@ -14,7 +14,7 @@ doc:
   histogram_bins: 100
   
 dataset:
-  gaussian:
+    name: "gaussian"
     n_classes: 2
     feature_dim: 10
     test_size: 10000

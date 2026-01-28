@@ -3,9 +3,7 @@ import numpy as np
 import matplotlib.ticker as ticker
 
 class Plotter:
-    def __init__(self, save_plots: bool = False, save_dir: str = None):
-        self.save_plots = save_plots
-        self.save_dir = save_dir
+    def __init__(self):
         self.figures = []
         
     def plot_histogram(self, 

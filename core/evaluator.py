@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 import torch
-from torch.utils.data import DataLoader
 from torch import nn
 
 
@@ -13,12 +12,14 @@ class Evaluator:
     """
 
     def __init__(self, device: str = "cpu"):
+        if device == 'cuda' and not torch.cuda.is_available():
+            raise ValueError("CUDA device requested but not available.")
         self.device = torch.device(device)
     
     @torch.no_grad()
     def compute_error(
         self, model: torch.nn.Module, 
-        loader: DataLoader) -> float:
+        loader: object) -> float:
         
         model.eval()
         # For performance we assume the caller places the model on the desired device once.
