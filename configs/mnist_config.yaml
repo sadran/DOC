@@ -2,7 +2,7 @@
 experiment:
   type: "mnist_classification"
   name: "mnist classification"
-  model: "mlp2"
+  model: "mlp1"
   dataset: "mnist"
   seed: 123
 

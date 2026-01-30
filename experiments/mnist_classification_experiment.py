@@ -165,11 +165,9 @@ class MnistClassificationExperiment(BaseExperiment):
                     continue
 
                 # create train dataset and train dataloader
-                train_dataset = Gaussian(feature_dim=self.dataset_config['feature_dim'],
-                                        n_samples_per_class=n//2,
-                                        mean_distance=self.dataset_config['mean_distance'],
-                                        sigma=self.dataset_config['sigma'],
-                                        seed=self.exp_config['seed'])
+                train_dataset = Mnist(images_path=self.dataset_config['test_images_filepath'],
+                                 labels_path=self.dataset_config['test_labels_filepath'],
+                                 n_samples=n)
                 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
 
                 self.trainer.sample_unit_sphere_weights_until_zero_error(self.model, train_loader, self.evaluator)
