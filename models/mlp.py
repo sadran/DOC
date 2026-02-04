@@ -32,7 +32,7 @@ class MLP(BaseNetwork):
         if activation.lower() == "relu":
             activation_module = nn.ReLU(inplace=True)
         elif activation.lower() == "leaky_relu":
-            activation_module = nn.LeakyReLU(negative_slope=0.1)
+            activation_module = nn.LeakyReLU(negative_slope=0.1, inplace=True)
         else:
             raise ValueError(f"Unsupported activation: {activation}")
         

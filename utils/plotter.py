@@ -25,7 +25,7 @@ class Plotter:
         
         ax.boxplot(true_errors, labels=n_values, positions=n_values)
         for n, errors in zip(n_values, true_errors):
-            ax.scatter([n] * len(errors), errors, color='red', alpha=0.5)
+            ax.scatter([n] * len(errors), errors, marker='x', c='red', s=10, alpha=0.5)
 
         ax.set_ylim(0.0, 1.0)
         ax.yaxis.set_major_locator(ticker.MultipleLocator(0.1))
@@ -40,10 +40,10 @@ class Plotter:
 
         fig, ax = plt.subplots(figsize=(6, 4))
         # red x: empirical mean test error of ERM solutions
-        ax.plot(n_values, erm_means, "x", c="blue", label="Empirical mean (ERM solutions)")
+        ax.plot(n_values, erm_means, "x", c="red", label="Empirical mean (ERM solutions)")
 
         # blue +: DOC-based predicted mean
-        ax.plot(xticks, doc_means, "+", c="red", label="DOC-based bound/prediction")
+        ax.plot(xticks, doc_means, "+", c="blue", label="DOC-based bound/prediction")
 
         ax.set_title(title)
         ax.set_xlabel("n")
