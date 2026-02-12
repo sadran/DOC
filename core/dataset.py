@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 import torch
-import os.path as osp
+from torchvision.datasets import ImageNet
 
 class Gaussian(Dataset):
     def __init__(self, 
@@ -76,4 +76,17 @@ class Mnist(Dataset):
         return self.x.size(0)
 
     def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
-        return self.x[index], self.y[index]
+        return self.x[index], self.y[index]    
+
+
+class ImageNet1k(Dataset):
+    def __init__(self, data_dir: str, split: str = "train", n_samples:int = 1300):
+        super().__init__()
+        self.dataset = ImageNet(root=data_dir, split='train')
+    
+    def __len__(self) -> int:
+        return len(self.dataset)
+    
+    def __getitem__(self, index) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.dataset[index]
+    

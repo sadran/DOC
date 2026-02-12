@@ -12,19 +12,13 @@ from torch.utils.data import DataLoader
 from core.dataset import Gaussian
 # models 
 from models.mlp import MLP
-# evaluator
-from core.evaluator import Evaluator
-# plotter
-from utils.plotter import Plotter
-# trainer
-from core.trainer import Trainer
 
-class GaussianClassificationExperiment(BaseExperiment):
+class GaussianMlpExperiment(BaseExperiment):
     def __init__(self, config):
-        super().__init__()
-        #-----------------------------
-        # 1) Load configurations
-        #-----------------------------
+        super().__init__(config)
+        # -----------------------------------------
+        # 1) Pars configurations
+        # -----------------------------------------
         # experiment configuration
         self.exp_config = config['experiment']
         # dataset configuration
@@ -39,30 +33,8 @@ class GaussianClassificationExperiment(BaseExperiment):
         # ERM configurations
         self.erm_config = config['erm']
 
-        #-----------------------------
-        # 2) Initialize components
-        #-----------------------------
-        # logger
-        from utils.logger import Logger
-        self.logger = Logger(config)
-        self.logger.log("Initialized GaussianClassificationExperiment.")
-        
-        # evaluator
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.evaluator = Evaluator(device=device)
-        if device == 'cuda':
-            self.logger.log(f"Using {torch.cuda.get_device_name(0)} for evaluation.")
-        else:
-            self.logger.log("Using CPU for evaluation.")
-            
-        # trainer
-        self.trainer = Trainer()
-
-        # plotter
-        self.plotter = Plotter()
-
         # -----------------------------
-        # 3) Build model (A1/A2/A3 etc.)
+        # 2) Build model (A1/A2/A3 etc.)
         # -----------------------------
         self.model = MLP(input_dim=self.model_config['input_dim'],
                     hidden_layers=self.model_config['hidden_layers'],

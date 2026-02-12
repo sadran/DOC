@@ -9,19 +9,14 @@ from experiments.base_experiment import BaseExperiment
 # DataLoader
 from torch.utils.data import DataLoader
 # datasets
-from core.dataset import Mnist
+from torchvision.datasets import ImageFolder
 # models 
-from models.mlp import MLP
-# evaluator
-from core.evaluator import Evaluator
-# plotter
-from utils.plotter import Plotter
-# trainer
-from core.trainer import Trainer
 
-class MnistClassificationExperiment(BaseExperiment):
+
+
+class ImageNetMobileViTExperiment(BaseExperiment):
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         # -----------------------------------------
         # 1) Loading configurations
         # -----------------------------------------
@@ -40,44 +35,23 @@ class MnistClassificationExperiment(BaseExperiment):
         self.erm_config = config['erm']
 
         # -----------------------------------------
-        # 2) Initialize components
+        # 2) Create the model
         # -----------------------------------------
-        # logger
-        from utils.logger import Logger
-        self.logger = Logger(config)
-
-        # evaluator
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.evaluator = Evaluator(device=device)
-        if device == 'cuda':
-            self.logger.log(f"Using {torch.cuda.get_device_name(0)} for evaluation.")
-        else:
-            self.logger.log("Using CPU for evaluation.")
-
-        # trainer
-        self.trainer = Trainer()
-
-        # plotter
-        self.plotter = Plotter()
-
-        # -----------------------------------------
-        # 3) Create the model
-        # -----------------------------------------
-        self.model = MLP(input_dim=self.model_config['input_dim'],
-                        hidden_layers=self.model_config['hidden_layers'],
-                        output_dim=self.model_config['output_dim'],
-                        activation=self.model_config['activation'],
-                        bias=self.model_config['bias'])
-        self.logger.log(f"Created the model: {self.model}")
-        self.model.to(self.evaluator.device)
+        self.model = None
+        #self.model = MLP(input_dim=self.model_config['input_dim'],
+        #                hidden_layers=self.model_config['hidden_layers'],
+        #                output_dim=self.model_config['output_dim'],
+        #                activation=self.model_config['activation'],
+        #                bias=self.model_config['bias'])
+        #self.logger.log(f"Created the model: {self.model}")
+        #self.model.to(self.evaluator.device)
 
         # -----------------------------------------
         # 4) Build a fixed balanced test set + loader
         # -----------------------------------------
-        self.test_dataset = Mnist(images_path=self.dataset_config['test_images_filepath'],
-                                 labels_path=self.dataset_config['test_labels_filepath'],
-                                 n_samples=self.dataset_config['test_size'])
-        self.logger.log(f"Loaded test dataset with {len(self.test_dataset)} samples from Mnist dataset.")
+        #self.test_dataset = ImageNet1k(self.dataset_config['root_path'], split='test', n_samples=self.dataset_config['test_size'])
+        self.test_dataset = ImageFolder("data/ILSVRC2012_img/ILSVRC2012_img_train")
+        self.logger.log(f"Loaded test dataset with {len(self.test_dataset)} samples from ImageNet1k dataset.")
         self.test_loader = DataLoader(self.test_dataset, batch_size=512, num_workers=4)
         self.logger.log("Created test DataLoader.")
 

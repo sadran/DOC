@@ -7,11 +7,11 @@ class ExperimentFactory:
         # create and return the corresponding experiment instance based on config
         experiment_type = config['experiment']['type']
         if experiment_type == 'gaussian_classification':
-            from experiments.gaussian_classification_experiment import GaussianClassificationExperiment
-            return GaussianClassificationExperiment(config)
+            from experiments.gaussian_mlp_experiment import GaussianMlpExperiment
+            return GaussianMlpExperiment(config)
         elif experiment_type == 'mnist_classification':
-            from experiments.mnist_classification_experiment import MnistClassificationExperiment
-            return MnistClassificationExperiment(config)
+            from experiments.mnist_mlp_experiment import MnistMLPExperiment
+            return MnistMLPExperiment(config)
         else:
             raise ValueError(f"Unknown experiment type: {experiment_type}")
 

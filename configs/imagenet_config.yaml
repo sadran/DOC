@@ -1,0 +1,45 @@
+
+experiment:
+  type: "imagenet_classification"
+  name: "imagenet classification"
+  model: "mlp1"
+  dataset: "imagenet"
+  seed: 123
+
+erm:
+  n_values: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+  solutions_per_n: 1000 #1000
+
+doc:
+  n_trials: 1000000 # 1000000
+  histogram_bins: 100
+
+training:
+  optimizer: "sgd"
+  lr: 0.01
+  batch_size: 32
+  epochs: 100
+  
+dataset:
+  name: "imagenet"
+  test_size: 500
+  train_size: 800
+  root_path: "data/ILSVRC2012_img"
+
+
+models:
+  mlp1:
+    type: "mlp"
+    input_dim: 784
+    hidden_layers: []
+    output_dim: 2
+    bias: False
+    activation: "leaky_relu"
+  mlp2:
+    type: "mlp"
+    input_dim: 784
+    hidden_layers: [10]
+    output_dim: 2
+    bias: False
+    activation: "leaky_relu"
+  
