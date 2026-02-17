@@ -24,6 +24,7 @@ dataset:
   name: "imagenet"
   test_size: 600
   train_size: 1000
+  test_batch_size: 64
   root_path: "data/ILSVRC2012_img"
 
 

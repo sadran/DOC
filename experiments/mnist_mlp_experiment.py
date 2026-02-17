@@ -11,45 +11,34 @@ from torch.utils.data import DataLoader
 # datasets
 from core.datasets import Mnist
 # models 
-from models.mlp import MLP
+from core.models import MLP
 
 class MnistMlpExperiment(BaseExperiment):
     def __init__(self, config):
         super().__init__(config)
         # -----------------------------------------
-        # 1) Pars configurations
+        # 1) Create the model
         # -----------------------------------------
-        # experiment configuration
-        self.exp_config = config['experiment']
-        # dataset configuration
-        self.dataset_config = config['dataset']
         # model configuration
-        if self.exp_config['model'] in config['models']:
-            self.model_config = config['models'][self.exp_config['model']]
+        if self.config['experiment']['model'] in config['models']:
+            model_config = config['models'][self.config['experiment']['model']]
         else:
-            raise ValueError(f"Model {self.exp_config['model']} not found in config models.")
-        # DOC configuration
-        self.doc_config = config['doc']
-        # ERM configurations
-        self.erm_config = config['erm']
-
-        # -----------------------------------------
-        # 2) Create the model
-        # -----------------------------------------
-        self.model = MLP(input_dim=self.model_config['input_dim'],
-                        hidden_layers=self.model_config['hidden_layers'],
-                        output_dim=self.model_config['output_dim'],
-                        activation=self.model_config['activation'],
-                        bias=self.model_config['bias'])
+            raise ValueError(f"Model {self.config['experiment']['model']} not found in config models.")
+        # create model
+        self.model = MLP(input_dim=model_config['input_dim'],
+                        hidden_layers=model_config['hidden_layers'],
+                        output_dim=model_config['output_dim'],
+                        activation=model_config['activation'],
+                        bias=model_config['bias'])
         self.logger.log(f"Created the model: {self.model}")
         self.model.to(self.evaluator.device)
 
         # -----------------------------------------
-        # 3) Build a fixed balanced test set + loader
+        # 2) Build a fixed balanced test set + loader
         # -----------------------------------------
-        self.test_dataset = Mnist(images_path=self.dataset_config['test_images_filepath'],
-                                 labels_path=self.dataset_config['test_labels_filepath'],
-                                 n_samples=self.dataset_config['test_size'])
+        self.test_dataset = Mnist(images_path=self.config['dataset']['test_images_filepath'],
+                                 labels_path=self.config['dataset']['test_labels_filepath'],
+                                 n_samples=self.config['dataset']['test_size'])
         self.logger.log(f"Loaded test dataset with {len(self.test_dataset)} samples from Mnist dataset.")
         self.test_loader = DataLoader(self.test_dataset, batch_size=512, num_workers=4)
         self.logger.log("Created test DataLoader.")
@@ -62,12 +51,12 @@ class MnistMlpExperiment(BaseExperiment):
         # ---------------------------------------------
         # 1) Estimate classifier density D(E) (left plot)
         # ---------------------------------------------
-        self.logger.log(f"Estimating classifier density D(E) with {self.doc_config['n_trials']} trials.")
+        self.logger.log(f"Estimating classifier density D(E) with {self.config['doc']['n_trials']} trials.")
         true_errors = self.estimate_classifier_density()
         self.logger.save_numpy_array(np.array(true_errors), "classifier_density.npy")
         self.logger.log(f"Estimating classifier density completed.")
         hist_fig, _ = self.plotter.plot_histogram(data=true_errors,
-                                                  bins=self.doc_config['histogram_bins'],
+                                                  bins=self.config['doc']['histogram_bins'],
                                                   title = "Classifier Density D(E)",
                                                   xlabel = "E",
                                                   ylabel = "D(E)")
@@ -82,7 +71,7 @@ class MnistMlpExperiment(BaseExperiment):
         self.logger.save_numpy_array(np.array(solutions_true_errors, dtype=object), "solutions_true_errors.npy")
         # plot boxplot of true errors for different training set sizes
         boxplot_fig, _ = self.plotter.plot_boxplot(true_errors=solutions_true_errors,
-                                                    n_values=self.erm_config['n_values'],
+                                                    n_values=self.config['erm']['n_values'],
                                                     title="True Error Distribution for Random Weights with Zero Training Error",
                                                     xlabel="Number of Training Samples",
                                                     ylabel="True Error")
@@ -99,7 +88,7 @@ class MnistMlpExperiment(BaseExperiment):
         # Blue crosses: DOC prediction from D(E)
         doc_means = self.doc_predicted_mean_error(true_errors)
         # Plot comparison (right-column figure)
-        doc_vs_erm_fig, ax = self.plotter.plot_doc_vs_erm(self.erm_config['n_values'], erm_means, doc_means)
+        doc_vs_erm_fig, ax = self.plotter.plot_doc_vs_erm(self.config['erm']['n_values'], erm_means, doc_means)
         self.logger.save_figure(doc_vs_erm_fig, "doc_vs_erm_mean_true_error.png")
 
         end_time = dt.now()
@@ -107,7 +96,7 @@ class MnistMlpExperiment(BaseExperiment):
 
     def estimate_classifier_density(self) -> list[float]:
         # Estimate classifier density D(E) by sampling random weights
-        n_trials = self.doc_config['n_trials']
+        n_trials = self.config['doc']['n_trials']
         true_errors = []
         # model should already be on evaluation device
         for _ in tqdm(range(n_trials)):
@@ -119,9 +108,9 @@ class MnistMlpExperiment(BaseExperiment):
     
     def estimate_true_error_distribution(self) -> list[float]:
         # Estimate true error distribution for random weights with zero training error
-        n_values = self.erm_config['n_values']
+        n_values = self.config['erm']['n_values']
 
-        solutions_per_n = self.erm_config['solutions_per_n']
+        solutions_per_n = self.config['erm']['solutions_per_n']
         true_errors = []  # list[list[float]]
         # ensure model is on the evaluator device
         self.model.to(self.evaluator.device)
@@ -138,8 +127,8 @@ class MnistMlpExperiment(BaseExperiment):
                     continue
 
                 # create train dataset and train dataloader
-                train_dataset = Mnist(images_path=self.dataset_config['test_images_filepath'],
-                                 labels_path=self.dataset_config['test_labels_filepath'],
+                train_dataset = Mnist(images_path=self.config['dataset']['test_images_filepath'],
+                                 labels_path=self.config['dataset']['test_labels_filepath'],
                                  n_samples=n)
                 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
 
@@ -158,7 +147,7 @@ class MnistMlpExperiment(BaseExperiment):
         """
         n_values = [n for n in range(0, 31, 2)]
         
-        bins = self.doc_config["histogram_bins"]
+        bins = self.config['doc']["histogram_bins"]
         # Compute histogram-based density and discrete approximation of the DOC formula.
         hist, bin_edges = np.histogram(
             true_errors,
