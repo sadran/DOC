@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 import torch
 from torchvision.datasets import ImageFolder
 from PIL import Image
+from torchvision import transforms
 
 class Gaussian(Dataset):
     def __init__(self, 
@@ -103,7 +104,13 @@ class ImageNet1k(Dataset):
         self.split = split
         # draw samples according to the split
         self.samples = self.__draw_samples(image_folder, n_samples)
-        
+        # transforms
+        self.transforms = transforms.Compose([transforms.Resize(256),
+                                              transforms.CenterCrop(224),
+                                              transforms.ToTensor(),
+                                              transforms.Normalize(mean=(0.485, 0.456, 0.406),
+                                                                   std=(0.229, 0.224, 0.225)),])
+                                
 
     def __draw_samples(self,data: ImageFolder, n_samples: int):
         """
@@ -157,5 +164,7 @@ class ImageNet1k(Dataset):
         with open(path, "rb") as f:
             img = Image.open(f)
             img.convert("RGB")
+            if self.transforms is not None:
+                img = self.transforms(img)
         return img, target
     

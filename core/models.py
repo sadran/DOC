@@ -1,5 +1,6 @@
 from torch import nn
 import torch
+import timm 
 
 class BaseNetwork(nn.Module):
     def __init__(self):
@@ -92,5 +93,11 @@ class MLP(BaseNetwork):
 
 
 class MobileViT(BaseNetwork):
-    def __init__(self):
+    def __init__(self, model_name: str = 'mobilevit_xs', num_classes: int = 2):
         super().__init__()
+        self.model = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        with torch.no_grad():
+            return self.model(x)
+    

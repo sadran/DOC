@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 # datasets
 from core.datasets import ImageNet1k
 # models 
+from core.models import MobileViT
 
 
 
@@ -26,14 +27,9 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         else:
             raise ValueError(f"Model {self.config['experiment']['model']} not found in config models.")
         # create model
-        self.model = None
-        #self.model = MLP(input_dim=self.config['models']['input_dim'],
-        #                hidden_layers=self.config['models']['hidden_layers'],
-        #                output_dim=self.config['models']['output_dim'],
-        #                activation=self.config['models']['activation'],
-        #                bias=self.config['models']['bias'])
-        #self.logger.log(f"Created the model: {self.model}")
-        #self.model.to(self.evaluator.device)
+        self.model = MobileViT(model_name=model_config['name'], num_classes=model_config['num_classes'])
+        self.logger.log(f"Created the model: {self.model}")
+        self.model.to(self.evaluator.device)
 
         # -----------------------------------------
         # 2) Build a fixed balanced test set + loader
@@ -45,7 +41,9 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         self.logger.log(f"Loaded test dataset with {len(self.test_dataset)} samples from ImageNet1k dataset.")
         self.test_loader = DataLoader(self.test_dataset,
                                       batch_size=self.config['dataset']['test_batch_size'],
-                                      num_workers=4)
+                                      num_workers=4,
+                                      pin_memory=True,
+                                      shuffle=False)
         self.logger.log("Created test DataLoader.")
 
         self.logger.log(f"Initializing {self.__class__.__name__} completed.")
