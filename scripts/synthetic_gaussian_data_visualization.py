@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-from core.dataset import Gaussian
+from core.datasets import Gaussian
 
 def visualize(data, label):
     plt.figure(figsize=(6, 6))

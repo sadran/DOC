@@ -22,8 +22,8 @@ training:
   
 dataset:
   name: "imagenet"
-  test_size: 500
-  train_size: 800
+  test_size: 600
+  train_size: 1000
   root_path: "data/ILSVRC2012_img"
 
 

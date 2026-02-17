@@ -9,7 +9,7 @@ from experiments.base_experiment import BaseExperiment
 # DataLoader
 from torch.utils.data import DataLoader
 # datasets
-from core.dataset import Mnist
+from core.datasets import Mnist
 # models 
 from models.mlp import MLP
 

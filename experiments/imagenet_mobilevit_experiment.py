@@ -9,7 +9,7 @@ from experiments.base_experiment import BaseExperiment
 # DataLoader
 from torch.utils.data import DataLoader
 # datasets
-from torchvision.datasets import ImageFolder
+from core.datasets import ImageNet1k
 # models 
 
 
@@ -50,7 +50,9 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         # 4) Build a fixed balanced test set + loader
         # -----------------------------------------
         #self.test_dataset = ImageNet1k(self.dataset_config['root_path'], split='test', n_samples=self.dataset_config['test_size'])
-        self.test_dataset = ImageFolder("data/ILSVRC2012_img/ILSVRC2012_img_train")
+        self.test_dataset = ImageNet1k(data_root_dir="data/ILSVRC2012_img/ILSVRC2012_img_train",
+                                       split='test',
+                                      n_samples=self.dataset_config['test_size'])
         self.logger.log(f"Loaded test dataset with {len(self.test_dataset)} samples from ImageNet1k dataset.")
         self.test_loader = DataLoader(self.test_dataset, batch_size=512, num_workers=4)
         self.logger.log("Created test DataLoader.")

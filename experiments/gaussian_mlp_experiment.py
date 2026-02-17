@@ -9,7 +9,7 @@ from experiments.base_experiment import BaseExperiment
 # DataLoader
 from torch.utils.data import DataLoader
 # datasets
-from core.dataset import Gaussian
+from core.datasets import Gaussian
 # models 
 from models.mlp import MLP
 
