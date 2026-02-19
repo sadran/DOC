@@ -13,6 +13,9 @@ class Logger:
         with open(self.save_dir / "config.yaml", "w") as f:
             yaml.dump(config, f)
 
+    def get_time_stamp(self) -> str:
+        return dt.now().isoformat()
+
     def log(self, message: str):
         print(message)
         log_file = self.save_dir / "log.txt"

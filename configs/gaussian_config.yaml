@@ -18,6 +18,8 @@ dataset:
     n_classes: 2
     feature_dim: 10
     test_size: 10000
+    test_batch_size: 1024
+    test_num_workers: 8
     mean_distance: 2.0
     sigma: 0.5
 

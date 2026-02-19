@@ -42,7 +42,12 @@ class GaussianMlpExperiment(BaseExperiment):
                                 sigma=self.config['dataset']['sigma'],
                                 seed=self.config['experiment']['seed'])
         self.logger.log(f"Created test dataset with {len(test_dataset)} samples.")
-        self.test_loader = DataLoader(test_dataset, batch_size=512, num_workers=4)
+        self.test_loader = DataLoader(test_dataset, batch_size=self.config['dataset']['test_batch_size'],
+                                      num_workers=self.config['dataset']['test_num_workers'],
+                                      pin_memory=True,
+                                      persistent_workers=True,
+                                      prefetch_factor=4,
+                                      shuffle=False)
         self.logger.log("Created test DataLoader.")
 
         self.logger.log(f"Initializing {self.__class__.__name__} completed.")

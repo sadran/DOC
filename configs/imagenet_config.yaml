@@ -7,8 +7,8 @@ experiment:
   seed: 123
 
 erm:
-  n_values: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-  solutions_per_n: 1000 #1000
+  n_values: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22] #, 24, 26, 28, 30]
+  solutions_per_n: 100 #1000
 
 doc:
   n_trials: 1000000 # 1000000
@@ -23,10 +23,13 @@ training:
 dataset:
   name: "imagenet"
   test_size: 600
-  train_size: 1000
-  test_batch_size: 128
+  train_size: 2000
   root_path: "data/ILSVRC2012_img"
 
+dataloader:
+  num_workers: 12
+  batch_size: 64
+  prefetch_factor: 4
 
 models:
   mobilevit_s:

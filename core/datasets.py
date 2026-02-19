@@ -91,8 +91,7 @@ class ImageNet1k(Dataset):
         :type data_root_dir: str
 
         :param split: train / test.
-            it draws '# n_samples' samples from the first 500 smaples of each class for train split 
-            and '# n_samples' samples from the remaining (800) samples of each class for test split. 
+            it draws '# n_samples' samples from both classes balancedly according to the split.
         :type split: str
         :param n_samples: Description
         :type n_samples: int
@@ -110,12 +109,13 @@ class ImageNet1k(Dataset):
                                               transforms.ToTensor(),
                                               transforms.Normalize(mean=(0.485, 0.456, 0.406),
                                                                    std=(0.229, 0.224, 0.225)),])
-                                
+        
+        self.x = torch.stack([self.transforms(Image.open(path).convert("RGB")) for path, _ in self.samples])
+        self.y = torch.tensor([target for _, target in self.samples], dtype=torch.long)
 
     def __draw_samples(self,data: ImageFolder, n_samples: int):
         """
-        deppeing on the split, it draws '# n_samples' samples from the first 500 smaples of each class for train split 
-        and '# n_samples' samples from the remaining (800) samples of each class for test split.
+        description: draws samples from the given ImageFolder dataset according to the split (train/test) and the number of samples requested.
         :param data: ImageFolder dataset object containing the samples to draw from
         :type data: ImageFolder
         """
@@ -127,23 +127,17 @@ class ImageNet1k(Dataset):
         # sampling reandomly from each class
         n_per_class = n_samples // 2
         if self.split == "train":
+            # for train split, we draw the samples from begining of the class data (first 500 samples for each class)
             samples = []
             for cls, data in class_data.items():
-                if len(data) < 500:
-                    raise ValueError(f"Not enough samples for class {cls} to draw {n_per_class} samples for training.")
-                if n_per_class > 500:
-                    raise ValueError(f"Requested {n_samples} samples, but not enough samples of each class available for training.")
-                perm = torch.randperm(500)[:n_per_class]
+                perm = torch.randperm(n_per_class)
                 samples.extend([data[i] for i in perm])
         elif self.split == "test":
+            # for test split, we draw the samples from the end of the class data (last 500 samples for each class)
             samples = []
             for cls, data in class_data.items():
-                if len(data) < 1300:
-                    raise ValueError(f"Not enough samples for class {cls} to draw {n_per_class} samples for testing.")
-                if n_per_class > 800:
-                    raise ValueError(f"Requested {n_samples} samples, but not enough samples of each class available for testing.")
-                perm = torch.randperm(800)[:n_per_class]
-                samples.extend([data[i + 500] for i in perm])
+                perm = torch.randperm(n_per_class)
+                samples.extend([data[-i] for i in perm])
         else:
             raise ValueError(f"Invalid split: {self.split}. Expected 'train' or 'test'.")    
         return samples  

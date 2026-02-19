@@ -12,8 +12,10 @@ class ExperimentFactory:
         elif experiment_type == 'mnist_classification':
             from experiments.mnist_mlp_experiment import MnistMLPExperiment
             return MnistMLPExperiment(config)
-        else:
-            raise ValueError(f"Unknown experiment type: {experiment_type}")
+        elif experiment_type == 'imagenet_classification':
+            from experiments.imagenet_mobilevit_experiment import ImageNetMobileViTExperiment
+            return ImageNetMobileViTExperiment(config)      
+        raise ValueError(f"Unknown experiment type: {experiment_type}")
 
 def main():
     parser = argparse.ArgumentParser()

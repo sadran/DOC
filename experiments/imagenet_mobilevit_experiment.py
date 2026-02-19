@@ -29,6 +29,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         # create model
         self.model = MobileViT(model_name=model_config['name'], num_classes=model_config['num_classes'])
         self.logger.log(f"Created the model: {self.model}")
+        self.logger.log(f"Model parameter count: {sum(p.numel() for p in self.model.parameters())}")
         self.model.to(self.evaluator.device)
 
         # -----------------------------------------
@@ -40,8 +41,10 @@ class ImageNetMobileViTExperiment(BaseExperiment):
                                       n_samples=self.config['dataset']['test_size'])
         self.logger.log(f"Loaded test dataset with {len(self.test_dataset)} samples from ImageNet1k dataset.")
         self.test_loader = DataLoader(self.test_dataset,
-                                      batch_size=self.config['dataset']['test_batch_size'],
-                                      num_workers=4,
+                                      batch_size=self.config['dataloader']['batch_size'],
+                                      num_workers=self.config['dataloader']['num_workers'],
+                                      persistent_workers=True,
+                                      prefetch_factor=self.config['dataloader']['prefetch_factor'],                                      
                                       pin_memory=True,
                                       shuffle=False)
         self.logger.log("Created test DataLoader.")

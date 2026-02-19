@@ -22,16 +22,28 @@ class Evaluator:
         loader: object) -> float:
         
         model.eval()
+        """
+        total = 0
+        incorrect = 0
+        for data, target in loader:
+            data, target = data.to(self.device, non_blocking=True), target.to(self.device, non_blocking=True)
+            with torch.amp.autocast(device_type=self.device.type):
+                logits = model(data)
+            preds = logits.argmax(dim=1)
+            total += target.size(0)
+            incorrect += (preds != target).sum().item()
+        return incorrect / total if total else 0.0
+        """
         # For performance we assume the caller places the model on the desired device once.
         # Fast-path: if the DataLoader wraps a small dataset with tensors (`.x`, `.y`), evaluate in a single pass.
         dataset = getattr(loader, "dataset", None)
-        if dataset is not None and hasattr(dataset, "x") and hasattr(dataset, "y"):
-            x = dataset.x.to(self.device, non_blocking=True)
-            y = dataset.y.to(self.device, non_blocking=True)
-            # with torch.amp.autocast(device_type=self.device.type):
+        #if dataset is not None and hasattr(dataset, "x") and hasattr(dataset, "y"):
+        x = dataset.x.to(self.device, non_blocking=True)
+        y = dataset.y.to(self.device, non_blocking=True)
+        with torch.amp.autocast(device_type=self.device.type):
             logits = model(x)
-            preds = logits.argmax(dim=1)
-            total = y.numel()
-            incorrect = (preds != y).sum().item()
-            return incorrect / total if total else 0.0
+        preds = logits.argmax(dim=1)
+        total = y.numel()
+        incorrect = (preds != y).sum().item()
+        return incorrect / total if total else 0.0
 
