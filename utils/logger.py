@@ -14,7 +14,7 @@ class Logger:
             yaml.dump(config, f)
 
     def get_time_stamp(self) -> str:
-        return dt.now().isoformat()
+        return dt.now()
 
     def log(self, message: str):
         print(message)

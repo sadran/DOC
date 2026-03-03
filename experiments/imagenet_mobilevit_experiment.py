@@ -67,7 +67,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
                                                   xlabel = "E",
                                                   ylabel = "D(E)")
         self.logger.save_figure(hist_fig, "classifier_density_histogram.png")
-        
+        """
         # -------------------------------------------------------------------
         # 2) Estimate true-error distribution of ERM solutions (middle plot)
         # -------------------------------------------------------------------
@@ -96,7 +96,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         # Plot comparison (right-column figure)
         doc_vs_erm_fig, ax = self.plotter.plot_doc_vs_erm(self.config['erm']['n_values'], erm_means, doc_means)
         self.logger.save_figure(doc_vs_erm_fig, "doc_vs_erm_mean_true_error.png")
-
+        """
         end_time = dt.now()
         self.logger.log(f"Experiment completed in {(end_time - start_time)}.")
 
@@ -106,8 +106,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         true_errors = []
         # model should already be on evaluation device
         for _ in tqdm(range(n_trials)):
-            flat_weights =  self.model.sample_unit_sphere_weights(device=self.evaluator.device)
-            self.model.set_flatten_weights(flat_weights)
+            self.model.init_weights()
             true_error = self.evaluator.compute_error(self.model, self.test_loader)
             true_errors.append(true_error)
         return true_errors
@@ -126,16 +125,15 @@ class ImageNetMobileViTExperiment(BaseExperiment):
             for s in tqdm(range(solutions_per_n)):
                 if n==0:
                     # if zero training samples, just sample random weights and compute true error
-                    flat_weights = self.model.sample_unit_sphere_weights(device=self.evaluator.device)
-                    self.model.set_flatten_weights(flat_weights)
+                    self.model.init_weights()
                     true_error = self.evaluator.compute_error(self.model, self.test_loader)
                     errors_for_n.append(true_error)
                     continue
 
                 # create train dataset and train dataloader
-                train_dataset = Mnist(images_path=self.config['dataset']['test_images_filepath'],
-                                 labels_path=self.config['dataset']['test_labels_filepath'],
-                                 n_samples=n)
+                train_dataset = ImageNet1k(data_root_dir="data/ILSVRC2012_img/ILSVRC2012_img_train",
+                                           split='train',
+                                           n_samples=n)
                 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
 
                 self.trainer.sample_unit_sphere_weights_until_zero_error(self.model, train_loader, self.evaluator)
