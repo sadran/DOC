@@ -21,15 +21,18 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         # -----------------------------------------
         # 1) Create the model
         # -----------------------------------------
-         # model configuration
+        # model configuration
         if self.config['experiment']['model'] in config['models']:
-            model_config = config['models'][self.config['experiment']['model']]
+            self.model_config = config['models'][self.config['experiment']['model']]
         else:
             raise ValueError(f"Model {self.config['experiment']['model']} not found in config models.")
         # create model
-        self.model = MobileViT(model_name=model_config['name'], num_classes=model_config['num_classes'])
+        self.model = MobileViT(self.model_config)
+        if self.model_config.get('skip_norm_layers', False):
+            self.model.replace_norm_layers_with_identity()
         self.logger.log(f"Created the model: {self.model}")
         self.logger.log(f"Model parameter count: {sum(p.numel() for p in self.model.parameters())}")
+        self.logger.log(f"Model configuration: {self.model_config}")
         self.model.to(self.evaluator.device)
 
         # -----------------------------------------
@@ -58,7 +61,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         # 1) Estimate classifier density D(E) (left plot)
         # ---------------------------------------------
         self.logger.log(f"Estimating classifier density D(E) with {self.config['doc']['n_trials']} trials.")
-        true_errors = self.estimate_classifier_density()
+        true_errors = self.estimate_classifier_density(init_method="unit_sphere")
         self.logger.save_numpy_array(np.array(true_errors), "classifier_density.npy")
         self.logger.log(f"Estimating classifier density completed.")
         hist_fig, _ = self.plotter.plot_histogram(data=true_errors,
@@ -67,7 +70,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
                                                   xlabel = "E",
                                                   ylabel = "D(E)")
         self.logger.save_figure(hist_fig, "classifier_density_histogram.png")
-        """
+        
         # -------------------------------------------------------------------
         # 2) Estimate true-error distribution of ERM solutions (middle plot)
         # -------------------------------------------------------------------
@@ -96,7 +99,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         # Plot comparison (right-column figure)
         doc_vs_erm_fig, ax = self.plotter.plot_doc_vs_erm(self.config['erm']['n_values'], erm_means, doc_means)
         self.logger.save_figure(doc_vs_erm_fig, "doc_vs_erm_mean_true_error.png")
-        """
+        
         end_time = dt.now()
         self.logger.log(f"Experiment completed in {(end_time - start_time)}.")
 
@@ -119,6 +122,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         true_errors = []  # list[list[float]]
         # ensure model is on the evaluator device
         self.model.to(self.evaluator.device)
+        
         for n in n_values:
             errors_for_n = []
             self.logger.log(f"Finding zero empirical error solutions for {n} training samples.")
@@ -136,7 +140,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
                                            n_samples=n)
                 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
 
-                self.trainer.sample_unit_sphere_weights_until_zero_error(self.model, train_loader, self.evaluator)
+                self.sample_unit_sphere_weights_until_zero_error(train_loader=train_loader)
                 true_error = self.evaluator.compute_error(self.model, self.test_loader)
                 errors_for_n.append(true_error)
             true_errors.append(errors_for_n)
@@ -170,3 +174,10 @@ class ImageNetMobileViTExperiment(BaseExperiment):
             doc_means.append(numerator / denominator)
         doc_means = np.array(doc_means, dtype=float)
         return doc_means
+
+    def sample_unit_sphere_weights_until_zero_error(self, train_loader: DataLoader):  # For random sampling experiments
+        while True:
+            self.model.init_weights()
+            train_error = self.evaluator.compute_error(self.model, train_loader)
+            if train_error == 0.0:
+                break 
