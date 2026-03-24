@@ -9,9 +9,9 @@ from experiments.base_experiment import BaseExperiment
 # DataLoader
 from torch.utils.data import DataLoader
 # datasets
-from core.datasets import Gaussian
+from core.datasets.gaussian import Gaussian
 # models 
-from core.models import MLP
+from core.models.mlp import MLP
 
 class GaussianMlpExperiment(BaseExperiment):
     def __init__(self, config):

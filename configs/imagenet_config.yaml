@@ -7,7 +7,7 @@ experiment:
   seed: 123
 
 erm:
-  n_values: [0, 2, 4, 6, 8, 10, 12] #, 14, 16, 18, 20, 22] #, 24, 26, 28, 30]
+  n_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
   solutions_per_n: 1000 #1000
 
 doc:
@@ -41,8 +41,8 @@ models:
   mobilevit_xxs:
     name: "mobilevit_xxs"
     num_classes: 2
-    skip_norm_layers: False
-    conv_init_method: kaiming_normal       # kaiming_normal, normal, unit_sphere
-    linear_init_method: normal     # normal, truncated_normal, unit_sphere
-    norm_init_method: ones              # ones, unit_sphere
+    skip_norm_layers: True
+    conv_init_method: unit_sphere       # kaiming_normal, normal, unit_sphere
+    linear_init_method: unit_sphere     # normal, truncated_normal, unit_sphere
+    norm_init_method: unit_sphere              # ones, unit_sphere
   

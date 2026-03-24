@@ -9,9 +9,9 @@ from experiments.base_experiment import BaseExperiment
 # DataLoader
 from torch.utils.data import DataLoader
 # datasets
-from core.datasets import Mnist
+from core.datasets.mnist import Mnist
 # models 
-from core.models import MLP
+from core.models.mlp import MLP
 
 class MnistMlpExperiment(BaseExperiment):
     def __init__(self, config):

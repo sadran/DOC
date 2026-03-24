@@ -54,6 +54,38 @@ class Plotter:
         ax.legend()
         return fig, ax
 
+    def plot_accuracy_curve(n_values, true_errors, use_std, label1="Model 1"):
+        def compute_stats(true_errors):
+            means = np.array([np.mean(r) for r in true_errors])
+
+            if use_std:
+                stds = np.array([np.std(r) for r in true_errors])
+                err_low = stds
+                err_high = stds
+            else:
+                mins = np.array([np.min(r) for r in true_errors])
+                maxs = np.array([np.max(r) for r in true_errors])
+                err_low = means - mins
+                err_high = maxs - means
+            return means, err_low, err_high
+
+        x = np.array(n_values)
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        # ---- First model ----
+        m1, l1, h1 = compute_stats(true_errors)
+        ax.errorbar(x, m1, yerr=[l1, h1], fmt="--", linewidth=2, capsize=5, label=label1)
+
+        ax.set_xlabel("n")
+        ax.set_ylabel("Test accuracy")
+        ax.grid(True, alpha=0.6)
+        ax.legend()
+
+        plt.tight_layout()
+        plt.show()
+        return fig, ax
+
     def show_plots(self):
         for figure, _ in self.figures:
             plt.figure(figure.number)   # activate the figure

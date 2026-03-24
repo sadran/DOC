@@ -1,0 +1,53 @@
+
+experiment:
+  type: "cifar10_classification"
+  name: "cifar10 classification"
+  model:  resnet20    # 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110', 'resnet1202'
+  dataset: "cifar10"
+  seed: 123
+
+erm:
+  n_values: [0, 2, 4, 6, 8, 10, 12]
+  solutions_per_n: 100 #1000
+
+doc:
+  n_trials: 1000 # 1000000
+  histogram_bins: 100
+
+training:
+  optimizer: "sgd"
+  lr: 0.01
+  batch_size: 32
+  epochs: 100
+  
+dataset:
+  name: "cifar10"
+  test_size: 
+  train_size: 
+  root_path: "data/cifar-10-python"
+
+dataloader:
+  num_workers: 12
+  batch_size: 4
+  prefetch_factor: 4
+
+models:
+  resnet20:
+    name: 'resnet20'
+    num_classes: 2
+  resnet32:
+    name: 'resnet32'
+    num_classes: 2
+  resnet44:
+    name: 'resnet44'
+    num_classes: 2
+  resnet56:
+    name: 'resnet56'
+    num_classes: 2
+  resnet110:
+    name: 'resnet110'
+    num_classes: 2
+  resnet1202:
+    name: 'resnet1202'
+    num_classes: 2
+  

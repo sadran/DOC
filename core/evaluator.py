@@ -37,8 +37,7 @@ class Evaluator:
         # For performance we assume the caller places the model on the desired device once.
         # Fast-path: if the DataLoader wraps a small dataset with tensors (`.x`, `.y`), evaluate in a single pass.
         dataset = getattr(loader, "dataset", None)
-        #if dataset is not None and hasattr(dataset, "x") and hasattr(dataset, "y"):
-        perm = torch.randperm(len(dataset))
+        
         x = dataset.x.to(self.device, non_blocking=True)
         y = dataset.y.to(self.device, non_blocking=True)
         #with torch.amp.autocast(device_type=self.device.type):

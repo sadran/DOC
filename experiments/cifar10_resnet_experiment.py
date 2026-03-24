@@ -9,13 +9,13 @@ from experiments.base_experiment import BaseExperiment
 # DataLoader
 from torch.utils.data import DataLoader
 # datasets
-from core.datasets.image_net import ImageNet1k
+from core.datasets.cifar10 import Cifar10
 # models 
-from core.models.mobile_vit import MobileViT
+from core.models.resnet import resnet20, resnet32, resnet44, resnet56, resnet110, resnet1202
 
 
 
-class ImageNetMobileViTExperiment(BaseExperiment):
+class Cifar10ResNetExperiment(BaseExperiment):
     def __init__(self, config):
         super().__init__(config)
         # -----------------------------------------
@@ -27,9 +27,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         else:
             raise ValueError(f"Model {self.config['experiment']['model']} not found in config models.")
         # create model
-        self.model = MobileViT(self.model_config)
-        if self.model_config.get('skip_norm_layers', False):
-            self.model.replace_norm_layers_with_identity()
+        self.model = resnet20()
         self.logger.log(f"Created the model: {self.model}")
         self.logger.log(f"Model parameter count: {sum(p.numel() for p in self.model.parameters())}")
         self.logger.log(f"Model configuration: {self.model_config}")
@@ -38,11 +36,8 @@ class ImageNetMobileViTExperiment(BaseExperiment):
         # -----------------------------------------
         # 2) Build a fixed balanced test set + loader
         # -----------------------------------------
-        #self.test_dataset = ImageNet1k(self.config['dataset']['root_path'], split='test', n_samples=self.config['dataset']['test_size'])
-        self.test_dataset = ImageNet1k(data_root_dir="data/ILSVRC2012_img/ILSVRC2012_img_train",
-                                       split='test',
-                                      n_samples=self.config['dataset']['test_size'])
-        self.logger.log(f"Loaded test dataset with {len(self.test_dataset)} samples from ImageNet1k dataset.")
+        self.test_dataset = Cifar10(root=self.config['dataset']['root_path'], train=False)
+        self.logger.log(f"Loaded test dataset with {len(self.test_dataset)} samples from Cifar10 dataset.")
         self.test_loader = DataLoader(self.test_dataset,
                                       batch_size=self.config['dataloader']['batch_size'],
                                       num_workers=self.config['dataloader']['num_workers'],
@@ -135,9 +130,7 @@ class ImageNetMobileViTExperiment(BaseExperiment):
                     continue
 
                 # create train dataset and train dataloader
-                train_dataset = ImageNet1k(data_root_dir="data/ILSVRC2012_img/ILSVRC2012_img_train",
-                                           split='train',
-                                           n_samples=n)
+                train_dataset = Cifar10(root=self.config['dataset']['root_path'], train=True, num_samples=n)
                 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
 
                 self.sample_unit_sphere_weights_until_zero_error(train_loader=train_loader)
