@@ -32,12 +32,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 from core.models.base_network import BaseNetwork
+from torch.nn.utils import parameters_to_vector, vector_to_parameters
 
 from torch.autograd import Variable
 
 __all__ = ['ResNet', 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110', 'resnet1202']
 
-
+def _replace_bn_with_identity(m):
+   for name, child in m.named_children():
+        if isinstance(child, nn.BatchNorm2d):
+            setattr(m, name, nn.Identity())
+        else:
+            _replace_bn_with_identity(child)
+        
+        
 class LambdaLayer(nn.Module):
     def __init__(self, lambd):
         super(LambdaLayer, self).__init__()
@@ -89,8 +97,8 @@ class ResNet(BaseNetwork):
         self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
         self.linear = nn.Linear(64, num_classes)
-
-        #self.apply(self.init_weights)
+        _replace_bn_with_identity(self)
+        self._build_weight_views()
         self.init_weights()
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -102,6 +110,32 @@ class ResNet(BaseNetwork):
 
         return nn.Sequential(*layers)
 
+    def _build_weight_views(self):
+        self._weight_tensors = []
+        self._weight_numels = []
+
+        for module in self.modules():
+            if isinstance(module, (nn.Conv2d, nn.Linear)):
+                if module.bias is not None:
+                    with torch.no_grad():
+                        module.bias.zero_()
+                    module.bias.requires_grad = False
+
+                self._weight_tensors.append(module.weight)
+                self._weight_numels.append(module.weight.numel())
+
+            elif isinstance(module, nn.BatchNorm2d):
+                with torch.no_grad():
+                    if module.weight is not None:
+                        module.weight.fill_(1.0)
+                    if module.bias is not None:
+                        module.bias.zero_()
+                if module.bias is not None:
+                    module.bias.requires_grad = False
+
+        total_numel = sum(self._weight_numels)
+        self.register_buffer("_theta_buffer", torch.empty(total_numel))
+
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
@@ -111,6 +145,7 @@ class ResNet(BaseNetwork):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+    
     """
     def init_weights(self):
         for m in self.modules():
@@ -126,7 +161,7 @@ class ResNet(BaseNetwork):
             if isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-    """
+    
     def init_weights(self):
         with torch.no_grad():
             weight_tensors = []
@@ -144,9 +179,7 @@ class ResNet(BaseNetwork):
                     weight_numels.append(module.weight.numel())
 
                 # Initialize norm layers with gamma=1, beta=0
-                elif isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d,
-                                        nn.LayerNorm, nn.GroupNorm, nn.InstanceNorm1d,
-                                        nn.InstanceNorm2d, nn.InstanceNorm3d)):
+                elif isinstance(module, nn.BatchNorm2d):
                     if module.weight is not None:
                         module.weight.fill_(1.0)
                     if module.bias is not None:
@@ -158,14 +191,29 @@ class ResNet(BaseNetwork):
             total_numel = sum(weight_numels)
 
             theta = torch.randn(total_numel, device=device)
-            theta = theta / (theta.norm() + 1e-12)
+            theta = (theta / theta.norm())
 
             # 3) Copy back into each weight tensor
-            pointer = 0
-            for w, numel in zip(weight_tensors, weight_numels):
-                chunk = theta[pointer:pointer + numel]
-                w.copy_(chunk.view_as(w))
-                pointer += numel
+            vec = parameters_to_vector(weight_tensors)
+            theta = torch.randn_like(vec)
+            theta = (theta / theta.norm())
+            vec.copy_(theta)  # copy the sampled unit vector into the concatenated weight vector
+            vector_to_parameters(vec, weight_tensors)
+
+            #pointer = 0
+            #for w, numel in zip(weight_tensors, weight_numels):
+            #    chunk = theta[pointer:pointer + numel]
+            #    w.copy_(chunk.view_as(w))
+            #    pointer += numel
+    """
+    
+    def init_weights(self):
+        with torch.no_grad():
+            theta = self._theta_buffer
+            theta.normal_()
+            theta.div_(theta.norm())
+            vector_to_parameters(theta, self._weight_tensors)
+            
         
         
     
