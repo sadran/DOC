@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from datetime import datetime as dt
 from tqdm import tqdm
+import torch.nn as nn
 
 # base experiment
 from experiments.base_experiment import BaseExperiment
@@ -12,6 +13,8 @@ from torch.utils.data import DataLoader
 from core.datasets.cifar10 import Cifar10
 # models 
 from core.models.resnet import resnet20, resnet32, resnet44, resnet56, resnet110, resnet1202
+# trainer and evaluator
+from core.trainer import Trainer
 
 
 
@@ -28,17 +31,17 @@ class Cifar10ResNetExperiment(BaseExperiment):
             raise ValueError(f"Model {self.config['experiment']['model']} not found in config models.")
         # create model
         if self.config['experiment']['model'] == 'resnet20':
-            self.model = resnet20()
+            self.model = resnet20(self.model_config)
         elif self.config['experiment']['model'] == 'resnet32':
-            self.model = resnet32()
+            self.model = resnet32(self.model_config)
         elif self.config['experiment']['model'] == 'resnet44':
-            self.model = resnet44()
+            self.model = resnet44(self.model_config)
         elif self.config['experiment']['model'] == 'resnet56':
-            self.model = resnet56()
+            self.model = resnet56(self.model_config)
         elif self.config['experiment']['model'] == 'resnet110':
-            self.model = resnet110()
+            self.model = resnet110(self.model_config)
         elif self.config['experiment']['model'] == 'resnet1202':
-            self.model = resnet1202()
+            self.model = resnet1202(self.model_config)
         else:
             raise ValueError(f"Unknown model type: {self.config['experiment']['model']}")
         self.logger.log(f"Created the model: {self.model}")
@@ -61,7 +64,20 @@ class Cifar10ResNetExperiment(BaseExperiment):
         self.logger.log("Created test DataLoader.")
 
         self.logger.log(f"Initializing {self.__class__.__name__} completed.")
-        
+        # -----------------------------------------
+        # 3) Create trainer for training-based experiments (if enabled)
+        # -----------------------------------------
+        if self.config['erm']['training']:
+            criterion = nn.CrossEntropyLoss()
+            optimizer = torch.optim.SGD(self.model.parameters(),
+                                        lr=self.config['erm']['training_parameters']['lr'],
+                                        momentum=self.config['erm']['training_parameters']['momentum'])
+            self.trainer = Trainer(model=self.model,
+                                criterion=criterion,
+                                optimizer=optimizer)
+            self.logger.log("Created Trainer for training-based ERM experiments.")
+            self.logger.log(f"Trainer configuration: {self.config['erm']['training_parameters']}")
+
 
     def run(self):
         start_time = dt.now()
@@ -87,7 +103,7 @@ class Cifar10ResNetExperiment(BaseExperiment):
         # Save numpy array of zero empirical true errors
         self.logger.save_numpy_array(np.array(solutions_true_errors, dtype=object), "solutions_true_errors.npy")
         # plot boxplot of true errors for different training set sizes
-        boxplot_fig, _ = self.plotter.plot_boxplot(true_errors=solutions_true_errors,
+        boxplot_fig, _ = self.plotter.plot_boxplot(data=solutions_true_errors,
                                                     n_values=self.config['erm']['n_values'],
                                                     title="True Error Distribution for Random Weights with Zero Training Error",
                                                     xlabel="Number of Training Samples",
@@ -125,7 +141,8 @@ class Cifar10ResNetExperiment(BaseExperiment):
             true_error, trivial_classifier = self.evaluator.compute_error_and_trivial_flag(self.model, self.test_dataset)
             if trivial_classifier:
                 trivial_classifier_count += 1
-                continue
+                if self.config['doc']['exclude_trivial_classifiers']:
+                    continue
             true_errors.append(true_error)
         return true_errors, trivial_classifier_count/n_trials
     
@@ -150,8 +167,9 @@ class Cifar10ResNetExperiment(BaseExperiment):
             if n == 0:
                 # if zero training samples, just sample random weights and compute true error
                 for _ in tqdm(range(solutions_per_n)):
-                    self.model.init_weights()
-                    true_error = self.evaluator.compute_error(self.model, self.test_loader)
+                    self.model.init_weights(init_method='original')
+                    true_error = self.evaluator.compute_error_on_dataset(self.model, self.test_dataset)
+                    #true_error = self.evaluator.evaluate(self.model, self.test_loader)
                     errors_for_n.append(true_error)
                 true_errors.append(errors_for_n)
 
@@ -165,28 +183,52 @@ class Cifar10ResNetExperiment(BaseExperiment):
                                         prefetch_factor=self.config['dataloader']['prefetch_factor'], 
                                         pin_memory=True, 
                                         persistent_workers=True)
-
-                for _ in tqdm(range(solutions_per_n)):
-                    train_loader.dataset.sample_new_data(num_samples=n)  # resample new training data for each solution
-                    self.sample_unit_sphere_weights_until_zero_error(train_loader=train_loader)
-                    true_error = self.evaluator.compute_error(self.model, self.test_loader)
-                    errors_for_n.append(true_error)
-                true_errors.append(errors_for_n)
+                if not self.config['erm']['training']:
+                    for _ in tqdm(range(solutions_per_n)):
+                        train_loader.dataset.sample_new_data(num_samples=n)  # resample new training data for each solution
+                        self.sample_unit_sphere_weights_until_zero_error(train_loader=train_loader)
+                        #true_error = self.evaluator.compute_error_on_dataset(self.model, self.test_dataset)
+                        true_error= self.evaluator.evaluate(self.model, self.test_loader)
+                        errors_for_n.append(true_error)
+                    true_errors.append(errors_for_n)
+                else:
+                    # if training is enabled, then for each solution, we train the model until it achieves zero training error, then compute true error
+                    for _ in tqdm(range(solutions_per_n)):
+                        converged = False
+                        self.model.train()
+                        counter = 0
+                        while not converged:
+                            train_loader.dataset.sample_new_data(num_samples=n)  # resample new training data for each solution
+                            self.model.init_weights(init_method='original')  # initialize weights with original ResNet initialization for training-based experiments
+                            converged = self.trainer.fit_until_zero_empirical_error(train_loader=train_loader,
+                                                                                    max_epochs=self.config['erm']['training_parameters']['max_epochs'],
+                                                                                    verbose=False)
+                            if not converged:
+                                counter += 1
+                                self.logger.log(f"Warning: Training did not converge to zero empirical error after {self.config['erm']['training_parameters']['max_epochs']} epochs. Retrying with new data and re-initialized weights. Retry count: {counter}")
+                        self.model.eval()
+                        #true_error = self.evaluator.compute_error_on_dataset(self.model, self.test_dataset)
+                        true_error = self.evaluator.evaluate(self.model, self.test_loader)
+                        errors_for_n.append(true_error)
+                    true_errors.append(errors_for_n)
+                    
             end_time = dt.now()
             self.logger.log(f"Finding zero empirical error solutions for {n} training samples completed in {(end_time - start_time)}.")
             self.logger.save_numpy_array(np.array(errors_for_n), f"solutions_true_errors_n_{n}.npy")
                 
         return true_errors
     
-    def doc_predicted_mean_error(self, true_errors: list[float], bins: int = 100):
+    def doc_predicted_mean_error(self, true_errors: list[float], bins: int = 100, n_values: list[int] = None):
         """
         Compute the DOC-based predicted mean true error for each n using the sampled true_errors.
 
         Returns:
             pred: np.ndarray of shape (len(n_values),)
         """
-        n_values = [n for n in range(0, 31, 2)]
-        
+        #n_values = [n for n in range(0, 31, 2)]
+        if n_values is None:
+            n_values = [n for n in range(0, 31, 2)]
+
         bins = self.config['doc']["histogram_bins"]
         # Compute histogram-based density and discrete approximation of the DOC formula.
         hist, bin_edges = np.histogram(
@@ -212,6 +254,7 @@ class Cifar10ResNetExperiment(BaseExperiment):
         train loader. It modifies the model's weights in-place and returns nothing."""
         while True:
             self.model.init_weights()
-            train_error = self.evaluator.compute_error(self.model, train_loader)
+            #train_error = self.evaluator.compute_error(self.model, train_loader)
+            train_error = self.evaluator.evaluate(self.model, train_loader)
             if train_error == 0.0:
                 break 

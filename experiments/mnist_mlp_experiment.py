@@ -70,7 +70,7 @@ class MnistMlpExperiment(BaseExperiment):
         # Save numpy array of zero empirical true errors
         self.logger.save_numpy_array(np.array(solutions_true_errors, dtype=object), "solutions_true_errors.npy")
         # plot boxplot of true errors for different training set sizes
-        boxplot_fig, _ = self.plotter.plot_boxplot(true_errors=solutions_true_errors,
+        boxplot_fig, _ = self.plotter.plot_boxplot(data=solutions_true_errors,
                                                     n_values=self.config['erm']['n_values'],
                                                     title="True Error Distribution for Random Weights with Zero Training Error",
                                                     xlabel="Number of Training Samples",

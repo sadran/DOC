@@ -40,7 +40,8 @@ class Cifar10(Dataset):
         return self.x[index], self.y[index]
     
     def sample_new_data(self, num_samples: int):
-        """Resample a new set of data points from the dataset."""
-        perm = torch.randperm(len(self.Y))[:num_samples]
-        self.x = self.X[perm]
-        self.y = self.Y[perm]
+        """Resample a new set of data points from the dataset balanced."""
+        perm0 = torch.randperm((self.Y == 0).sum())[:num_samples // 2]
+        perm1 = torch.randperm((self.Y == 1).sum())[:num_samples // 2]
+        self.x = torch.cat([self.X[self.Y == 0][perm0], self.X[self.Y == 1][perm1]], dim=0)
+        self.y = torch.cat([self.Y[self.Y == 0][perm0], self.Y[self.Y == 1][perm1]], dim=0)

@@ -87,7 +87,7 @@ class BasicBlock(nn.Module):
         return out
 
 class ResNet(BaseNetwork):
-    def __init__(self, block, num_blocks, num_classes=2):
+    def __init__(self, block, num_blocks, num_classes=2, replace_bn_with_identity=False):
         super(ResNet, self).__init__()
         self.in_planes = 16
 
@@ -97,7 +97,8 @@ class ResNet(BaseNetwork):
         self.layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
         self.linear = nn.Linear(64, num_classes)
-        _replace_bn_with_identity(self)
+        if replace_bn_with_identity:
+            _replace_bn_with_identity(self)
         self._build_weight_views()
         self.init_weights()
 
@@ -146,100 +147,44 @@ class ResNet(BaseNetwork):
         out = self.linear(out)
         return out
     
-    """
-    def init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
-                #nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-                #nn.init.normal_(m.weight, std=0.01)
-                flat_weights = torch.randn(self.num_parameters(), device=m.weight.device)
-                flat_weights /= flat_weights.norm()
-                with torch.no_grad():
-                    m.weight.data.copy_(flat_weights[:m.weight.numel()].view_as(m.weight))
-                if m.bias is not None:
-                    nn.init.zeros_(m.bias)
-            if isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-    
-    def init_weights(self):
-        with torch.no_grad():
-            weight_tensors = []
-            weight_numels = []
-
-            # 1) Handle biases and normalization layers first
-            for module in self.modules():
-                # Remove / freeze bias for Conv and Linear
-                if isinstance(module, (nn.Conv2d, nn.Linear)):
-                    if module.bias is not None:
-                        module.bias.zero_()
-                        module.bias.requires_grad = False
-
-                    weight_tensors.append(module.weight)
-                    weight_numels.append(module.weight.numel())
-
-                # Initialize norm layers with gamma=1, beta=0
-                elif isinstance(module, nn.BatchNorm2d):
-                    if module.weight is not None:
-                        module.weight.fill_(1.0)
-                    if module.bias is not None:
-                        module.bias.zero_()
-                        module.bias.requires_grad = False
-
-            # 2) Sample ONE global vector for all Conv/Linear weights
-            device = weight_tensors[0].device
-            total_numel = sum(weight_numels)
-
-            theta = torch.randn(total_numel, device=device)
-            theta = (theta / theta.norm())
-
-            # 3) Copy back into each weight tensor
-            vec = parameters_to_vector(weight_tensors)
-            theta = torch.randn_like(vec)
-            theta = (theta / theta.norm())
-            vec.copy_(theta)  # copy the sampled unit vector into the concatenated weight vector
-            vector_to_parameters(vec, weight_tensors)
-
-            #pointer = 0
-            #for w, numel in zip(weight_tensors, weight_numels):
-            #    chunk = theta[pointer:pointer + numel]
-            #    w.copy_(chunk.view_as(w))
-            #    pointer += numel
-    """
-    
-    def init_weights(self):
-        with torch.no_grad():
+    @torch.no_grad
+    def init_weights(self, init_method='unit_sphere'):
+        if init_method == 'unit_sphere':
             theta = self._theta_buffer
             theta.normal_()
             theta.div_(theta.norm())
-            vector_to_parameters(theta, self._weight_tensors)
-            
-        
-        
+            vector_to_parameters(theta, self._weight_tensors)      
+        elif init_method == 'original':
+            for m in self.modules():
+                if isinstance(m, nn.Conv2d):
+                    init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                elif isinstance(m, nn.BatchNorm2d):
+                    init.constant_(m.weight, 1)
+                    init.constant_(m.bias, 0)
+                elif isinstance(m, nn.Linear):
+                    init.normal_(m.weight, std=1e-3)
+                    if m.bias is not None:
+                        init.constant_(m.bias, 0)
     
 
-def resnet20():
-    return ResNet(BasicBlock, [3, 3, 3])
+def resnet20(config):
+    return ResNet(BasicBlock, [3, 3, 3], replace_bn_with_identity=config.get('replace_bn_with_identity', False))
+
+def resnet32(config):
+    return ResNet(BasicBlock, [5, 5, 5], replace_bn_with_identity=config.get('replace_bn_with_identity', False))
+
+def resnet44(config):
+    return ResNet(BasicBlock, [7, 7, 7], replace_bn_with_identity=config.get('replace_bn_with_identity', False))
+
+def resnet56(config):
+    return ResNet(BasicBlock, [9, 9, 9], replace_bn_with_identity=config.get('replace_bn_with_identity', False))
 
 
-def resnet32():
-    return ResNet(BasicBlock, [5, 5, 5])
+def resnet110(config):
+    return ResNet(BasicBlock, [18, 18, 18], replace_bn_with_identity=config.get('replace_bn_with_identity', False))
 
-
-def resnet44():
-    return ResNet(BasicBlock, [7, 7, 7])
-
-
-def resnet56():
-    return ResNet(BasicBlock, [9, 9, 9])
-
-
-def resnet110():
-    return ResNet(BasicBlock, [18, 18, 18])
-
-
-def resnet1202():
-    return ResNet(BasicBlock, [200, 200, 200])
+def resnet1202(config):
+    return ResNet(BasicBlock, [200, 200, 200], replace_bn_with_identity=config.get('replace_bn_with_identity', False))
 
 
 def test(net):

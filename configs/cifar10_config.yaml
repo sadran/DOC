@@ -2,23 +2,25 @@
 experiment:
   type: "cifar10_classification"
   name: "cifar10 classification"
-  model:  resnet20    # 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110', 'resnet1202'
+  model:  resnet44    # 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110', 'resnet1202'
   dataset: "cifar10"
   seed: 123
 
 erm:
-  n_values: [0, 2, 4, 6, 8, 10, 12, 14] #, 12]
-  solutions_per_n: 1000 #1000
+  n_values: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30] # [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+  #n_values: [0, 20, 40, 80, 120, 160, 200, 240, 280, 320, 360, 400] # [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+  solutions_per_n: 5000 #1000
+  training: True
+  training_parameters:
+    optimizer: "sgd"
+    lr: 0.01
+    momentum: 0.9
+    max_epochs: 10000
 
 doc:
   n_trials: 1000000   # 1000000
   histogram_bins: 100
-
-training:
-  optimizer: "sgd"
-  lr: 0.01
-  batch_size: 32
-  epochs: 100
+  exclude_trivial_classifiers: True
   
 dataset:
   name: "cifar10"
@@ -27,27 +29,33 @@ dataset:
   root_path: "data/cifar-10-python"
 
 dataloader:
-  num_workers: 8
+  num_workers: 18
   batch_size: 4
-  prefetch_factor: 4
+  prefetch_factor: 8
 
 models:
   resnet20:
     name: 'resnet20'
     num_classes: 2
+    replace_bn_with_identity: False
   resnet32:
     name: 'resnet32'
     num_classes: 2
+    replace_bn_with_identity: True
   resnet44:
     name: 'resnet44'
     num_classes: 2
+    replace_bn_with_identity: False
   resnet56:
     name: 'resnet56'
-    num_classes: 2
+    num_classes: 2  
+    replace_bn_with_identity: True
   resnet110:
     name: 'resnet110'
     num_classes: 2
+    replace_bn_with_identity: True
   resnet1202:
     name: 'resnet1202'
     num_classes: 2
+    replace_bn_with_identity: True
   

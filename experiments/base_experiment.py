@@ -22,9 +22,6 @@ class BaseExperiment:
             self.logger.log(f"Using {torch.cuda.get_device_name(0)} for evaluation.")
         else:
             self.logger.log("Using CPU for evaluation.")
-            
-        # trainer
-        self.trainer = Trainer()
 
         # plotter
         self.plotter = Plotter()

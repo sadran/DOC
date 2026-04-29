@@ -3,6 +3,8 @@
 from __future__ import annotations
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
+import torch.nn as nn
 
 def _is_trivial_classifier(preds) -> bool:
     # Check if all predictions are the same (i.e., the model is trivial)
@@ -17,6 +19,40 @@ class Evaluator:
         if device == 'cuda' and not torch.cuda.is_available():
             raise ValueError("CUDA device requested but not available.")
         self.device = torch.device(device)
+    
+    def _move_batch_to_device(self, batch):
+        inputs, targets = batch
+        return inputs.to(self.device, non_blocking=True), targets.to(self.device, non_blocking=True)
+    
+    def _compute_num_correct(self, outputs: torch.Tensor, targets: torch.Tensor) -> int:
+        preds = outputs.argmax(dim=1)
+        return (preds == targets).sum().item()
+    
+    @torch.inference_mode()
+    def evaluate(self, model: torch.nn.Module, data_loader: DataLoader):
+        criterion = nn.CrossEntropyLoss()
+        model.eval()
+
+        running_loss = 0.0
+        running_correct = 0
+        total_samples = 0
+
+        for batch in data_loader:
+            inputs, targets = self._move_batch_to_device(batch)
+
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+
+            batch_size = inputs.size(0)
+            running_loss += loss.item() * batch_size
+            running_correct += self._compute_num_correct(outputs, targets)
+            total_samples += batch_size
+
+        epoch_loss = running_loss / total_samples
+        epoch_acc = running_correct / total_samples
+        epoch_error = 1.0 - epoch_acc
+
+        return epoch_error
     
     @torch.no_grad()
     def compute_error(self, model: torch.nn.Module, loader: object):
